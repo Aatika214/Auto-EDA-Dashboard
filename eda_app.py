@@ -130,7 +130,7 @@ with st.expander("🧮 View Raw Data"):
 
 st.subheader("✨ Advanced Comparative Visuals")
 
-# 1. Top 10 Customers by Spending (Final Fix)
+# 1. Top 10 Customers by Spending (Only Axis Labels, No Tick Values)
 st.markdown("#### 🏅 Top 10 Customers by Spending")
 top_customers = (df.groupby("customer_id")["revenue"].sum()
                    .sort_values(ascending=False).head(10).reset_index())
@@ -138,14 +138,16 @@ top_customers = (df.groupby("customer_id")["revenue"].sum()
 fig1, ax1 = plt.subplots(figsize=(8,5))
 sns.barplot(data=top_customers, x="revenue", y="customer_id", palette="viridis", ax=ax1)
 
+# Titles and axis labels
 ax1.set_title("Top 10 Customers by Spending", fontsize=14)
-ax1.set_xlabel("Revenue ($)")
-ax1.set_ylabel("Customer ID")
+ax1.set_xlabel("Revenue ($)", fontsize=12)
+ax1.set_ylabel("Customer ID", fontsize=12)
 
-# ✅ Remove overlapping numbers from x-axis and use short format (e.g., 1k, 5k, 10k)
-ax1.get_xaxis().set_major_formatter(plt.FuncFormatter(lambda x, loc: f"${x/1000:.1f}k"))
+# ❌ Hide axis tick values
+ax1.set_xticks([])
+ax1.set_yticks([])
 
-# Add values on bars
+# ✅ Show values on bars
 for p in ax1.patches:
     ax1.annotate(f"${p.get_width():,.0f}",
                  (p.get_width(), p.get_y() + p.get_height()/2),
