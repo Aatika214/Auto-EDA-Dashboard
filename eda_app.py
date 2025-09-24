@@ -130,7 +130,7 @@ with st.expander("🧮 View Raw Data"):
 
 st.subheader("✨ Advanced Comparative Visuals")
 
-# 1. Top 10 Customers by Spending (Improved readability)
+# 1. Top 10 Customers by Spending (Final Fix)
 st.markdown("#### 🏅 Top 10 Customers by Spending")
 top_customers = (df.groupby("customer_id")["revenue"].sum()
                    .sort_values(ascending=False).head(10).reset_index())
@@ -142,8 +142,8 @@ ax1.set_title("Top 10 Customers by Spending", fontsize=14)
 ax1.set_xlabel("Revenue ($)")
 ax1.set_ylabel("Customer ID")
 
-# Format x-axis with commas
-ax1.get_xaxis().set_major_formatter(plt.FuncFormatter(lambda x, loc: f"{int(x):,}"))
+# ✅ Remove overlapping numbers from x-axis and use short format (e.g., 1k, 5k, 10k)
+ax1.get_xaxis().set_major_formatter(plt.FuncFormatter(lambda x, loc: f"${x/1000:.1f}k"))
 
 # Add values on bars
 for p in ax1.patches:
