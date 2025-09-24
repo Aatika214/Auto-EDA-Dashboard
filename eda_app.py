@@ -136,7 +136,7 @@ top_customers = (df.groupby("customer_id")["revenue"].sum()
                    .sort_values(ascending=False).head(10).reset_index())
 
 fig1, ax1 = plt.subplots(figsize=(8,5))
-sns.barplot(data=top_customers, x="revenue", y="customer_id", palette="viridis", ax=ax1)
+sns.barplot(data=top_customers, y="customer_id", palette="viridis", ax=ax1)
 
 # Titles and axis labels
 ax1.set_title("Top 10 Customers by Spending", fontsize=14)
