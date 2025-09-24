@@ -130,36 +130,69 @@ with st.expander("🧮 View Raw Data"):
 
 st.subheader("✨ Advanced Comparative Visuals")
 
-# 1. Top 10 Customers by Spending
+# 1. Top 10 Customers by Spending (Improved readability)
 st.markdown("#### 🏅 Top 10 Customers by Spending")
 top_customers = (df.groupby("customer_id")["revenue"].sum()
                    .sort_values(ascending=False).head(10).reset_index())
+
 fig1, ax1 = plt.subplots(figsize=(8,5))
 sns.barplot(data=top_customers, x="revenue", y="customer_id", palette="viridis", ax=ax1)
+
 ax1.set_title("Top 10 Customers by Spending", fontsize=14)
 ax1.set_xlabel("Revenue ($)")
 ax1.set_ylabel("Customer ID")
+
+# Format x-axis with commas
+ax1.get_xaxis().set_major_formatter(plt.FuncFormatter(lambda x, loc: f"{int(x):,}"))
+
+# Add values on bars
+for p in ax1.patches:
+    ax1.annotate(f"${p.get_width():,.0f}",
+                 (p.get_width(), p.get_y() + p.get_height()/2),
+                 xytext=(5,0), textcoords="offset points",
+                 ha="left", va="center", fontsize=10, color="black")
+
 st.pyplot(fig1)
 
-# 2. Monthly Orders Trend
+
+# 2. Monthly Orders Trend with values
 st.markdown("#### 📅 Monthly Orders Trend")
-monthly_orders = df.groupby(df["order_date"].dt.to_period("M"))["order_id"].nunique().reset_index()
-monthly_orders["order_date"] = monthly_orders["order_date"].astype(str)
-fig2, ax2 = plt.subplots(figsize=(8,5))
-sns.lineplot(data=monthly_orders, x="order_date", y="order_id", marker="o", color="crimson", ax=ax2)
+df["month"] = pd.to_datetime(df["order_date"]).dt.to_period("M")
+monthly_orders = df.groupby("month")["order_id"].nunique().reset_index()
+monthly_orders["month"] = monthly_orders["month"].astype(str)
+
+fig2, ax2 = plt.subplots(figsize=(10,5))
+sns.lineplot(data=monthly_orders, x="month", y="order_id", marker="o", ax=ax2, color="teal")
+
 ax2.set_title("Monthly Orders Trend", fontsize=14)
 ax2.set_xlabel("Month")
 ax2.set_ylabel("Number of Orders")
-plt.xticks(rotation=45)
+ax2.tick_params(axis="x", rotation=45)
+
+# Add values on points
+for i, row in monthly_orders.iterrows():
+    ax2.text(row["month"], row["order_id"]+0.5, str(row["order_id"]),
+             ha="center", fontsize=9, color="black")
+
 st.pyplot(fig2)
 
-# 3. Orders by Region (UK excluded)
-st.markdown("#### 🌍 Orders by Region (Excluding UK)")
-region_orders = df[df["region"] != "UK"].groupby("region")["order_id"].nunique().reset_index()
-region_orders = region_orders.sort_values("order_id", ascending=False).head(10)
+
+# 3. Orders by Region with values
+st.markdown("#### 🌍 Orders by Region")
+region_orders = df.groupby("region")["order_id"].nunique().reset_index()
+
 fig3, ax3 = plt.subplots(figsize=(8,5))
-sns.barplot(data=region_orders, x="order_id", y="region", palette="magma", ax=ax3)
-ax3.set_title("Orders by Region (Top 10, UK Excluded)", fontsize=14)
-ax3.set_xlabel("Number of Orders")
-ax3.set_ylabel("Region")
+sns.barplot(data=region_orders, x="region", y="order_id", palette="coolwarm", ax=ax3)
+
+ax3.set_title("Orders by Region", fontsize=14)
+ax3.set_xlabel("Region")
+ax3.set_ylabel("Number of Orders")
+ax3.tick_params(axis="x", rotation=30)
+
+# Add values on bars
+for p in ax3.patches:
+    ax3.annotate(f"{int(p.get_height()):,}",
+                 (p.get_x() + p.get_width()/2., p.get_height()),
+                 ha="center", va="bottom", fontsize=10, color="black")
+
 st.pyplot(fig3)
