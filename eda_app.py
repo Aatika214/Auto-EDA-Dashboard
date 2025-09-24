@@ -130,7 +130,7 @@ with st.expander("🧮 View Raw Data"):
 
 st.subheader("✨ Advanced Comparative Visuals")
 
-# 1. Top 10 Customers by Spending (Only Axis Labels, No Tick Values)
+# 1. Top 10 Customers by Spending (Only Axis Labels, No Bar Labels)
 st.markdown("#### 🏅 Top 10 Customers by Spending")
 top_customers = (df.groupby("customer_id")["revenue"].sum()
                    .sort_values(ascending=False).head(10).reset_index())
@@ -143,18 +143,11 @@ ax1.set_title("Top 10 Customers by Spending", fontsize=14)
 ax1.set_xlabel("Revenue ($)", fontsize=12)
 ax1.set_ylabel("Customer ID", fontsize=12)
 
-# ❌ Hide axis tick values
-ax1.set_xticks([])
-ax1.set_yticks([])
-
-# ✅ Show values on bars
-for p in ax1.patches:
-    ax1.annotate(f"${p.get_width():,.0f}",
-                 (p.get_width(), p.get_y() + p.get_height()/2),
-                 xytext=(5,0), textcoords="offset points",
-                 ha="left", va="center", fontsize=10, color="black")
+# ✅ Keep axis ticks visible
+# ❌ Remove bar labels (no annotation here)
 
 st.pyplot(fig1)
+
 
 
 # 2. Monthly Orders Trend with values
