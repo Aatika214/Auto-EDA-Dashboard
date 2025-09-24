@@ -119,34 +119,6 @@ sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
 st.pyplot(fig)
 
 # ========================
-# 🔍 Distributions (Professional Visuals)
-# ========================
-st.subheader("🔍 Distributions of Numeric Features")
-
-# Quantity
-fig_q = px.histogram(df, x="quantity", nbins=30, marginal="box",
-                     title="Distribution of Quantity", color_discrete_sequence=["#636EFA"])
-st.plotly_chart(fig_q, use_container_width=True)
-
-# Price
-log_price = st.checkbox("🔄 Log Scale for Price", value=False)
-fig_p = px.histogram(df, x="price", nbins=40, title="Distribution of Price",
-                     color_discrete_sequence=["#EF553B"])
-if log_price:
-    fig_p.update_xaxes(type="log")
-st.plotly_chart(fig_p, use_container_width=True)
-
-# Discount
-fig_d = px.histogram(df, x="discount", nbins=20, histnorm="probability density",
-                     title="Distribution of Discount (Density)", color_discrete_sequence=["#00CC96"])
-st.plotly_chart(fig_d, use_container_width=True)
-
-# Revenue
-fig_r = px.violin(df, y="revenue", box=True, points="all",
-                  title="Revenue Spread (Violin + Outliers)", color_discrete_sequence=["#AB63FA"])
-st.plotly_chart(fig_r, use_container_width=True)
-
-# ========================
 # 🧮 Raw Data
 # ========================
 with st.expander("🧮 View Raw Data"):
@@ -181,13 +153,13 @@ ax2.set_ylabel("Number of Orders")
 plt.xticks(rotation=45)
 st.pyplot(fig2)
 
-# 3. Orders by Country (UK removed)
-st.markdown("#### 🌍 Orders by Country (Excluding UK)")
-country_orders = df[df["country"] != "UK"].groupby("country")["order_id"].nunique().reset_index()
-country_orders = country_orders.sort_values("order_id", ascending=False).head(10)
+# 3. Orders by Region (UK excluded)
+st.markdown("#### 🌍 Orders by Region (Excluding UK)")
+region_orders = df[df["region"] != "UK"].groupby("region")["order_id"].nunique().reset_index()
+region_orders = region_orders.sort_values("order_id", ascending=False).head(10)
 fig3, ax3 = plt.subplots(figsize=(8,5))
-sns.barplot(data=country_orders, x="order_id", y="country", palette="magma", ax=ax3)
-ax3.set_title("Orders by Country (Top 10, UK Excluded)", fontsize=14)
+sns.barplot(data=region_orders, x="order_id", y="region", palette="magma", ax=ax3)
+ax3.set_title("Orders by Region (Top 10, UK Excluded)", fontsize=14)
 ax3.set_xlabel("Number of Orders")
-ax3.set_ylabel("Country")
+ax3.set_ylabel("Region")
 st.pyplot(fig3)
