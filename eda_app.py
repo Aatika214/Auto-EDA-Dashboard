@@ -1,69 +1,136 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
+import plotly.express as px
 
-# Streamlit App Title
-st.title("📊 Advanced EDA Dashboard")
+# Streamlit page config
+st.set_page_config(page_title="📦 E-commerce EDA Dashboard", layout="wide")
+
+st.title("📦 Advanced E-commerce EDA Dashboard")
 
 # File uploader
-uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
+uploaded_file = st.file_uploader("Upload your ecommerce CSV file", type=["csv"])
+if uploaded_file is None:
+    st.info("👆 Upload your ecommerce dataset to begin.")
+    st.stop()
 
-if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
+# Load dataset
+df = pd.read_csv(uploaded_file)
 
-    st.subheader("🔎 Dataset Preview")
+# Ensure correct dtypes
+df["order_date"] = pd.to_datetime(df["order_date"], errors="coerce")
+
+# Calculate revenue
+df["revenue"] = df["quantity"] * df["price"] * (1 - df["discount"])
+
+# ========================
+# 🔎 Dataset Overview
+# ========================
+with st.expander("📋 Dataset Overview"):
     st.write(df.head())
+    st.write("Shape:", df.shape)
+    st.write("Data Types:", df.dtypes)
+    st.write("Missing Values:", df.isnull().sum())
 
-    st.subheader("📐 Dataset Info")
-    st.write(f"Rows: {df.shape[0]}, Columns: {df.shape[1]}")
-    st.write("Column Data Types:")
-    st.write(df.dtypes)
+# ========================
+# 📊 KPIs
+# ========================
+st.subheader("📊 Key Metrics")
+total_revenue = df["revenue"].sum()
+total_orders = df["order_id"].nunique()
+avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
 
-    st.subheader("❌ Missing Values")
-    st.write(df.isnull().sum())
+col1, col2, col3 = st.columns(3)
+col1.metric("💰 Total Revenue", f"${total_revenue:,.2f}")
+col2.metric("📦 Total Orders", f"{total_orders:,}")
+col3.metric("🛒 Avg Order Value", f"${avg_order_value:,.2f}")
 
-    st.subheader("📊 Summary Statistics")
-    st.write(df.describe(include="all").transpose())
+# ========================
+# 📈 Revenue Trend
+# ========================
+st.subheader("📈 Revenue Over Time")
+freq = st.radio("Select frequency:", ["D", "M"], index=1, horizontal=True)
 
-    # Numeric columns
-    num_cols = df.select_dtypes(include=["int64", "float64"]).columns
-    cat_cols = df.select_dtypes(include=["object"]).columns
+if freq == "D":
+    ts = df.groupby(df["order_date"].dt.date)["revenue"].sum().reset_index()
+else:
+    ts = df.groupby(df["order_date"].dt.to_period("M"))["revenue"].sum().reset_index()
+    ts["order_date"] = ts["order_date"].astype(str)
 
-    # Distribution of numeric columns
-    st.subheader("📈 Distributions of Numeric Columns")
-    for col in num_cols:
-        fig, ax = plt.subplots()
-        sns.histplot(df[col], kde=True, ax=ax, color="skyblue")
-        ax.set_title(f"Distribution of {col}")
-        st.pyplot(fig)
+fig = px.line(ts, x="order_date", y="revenue", title="Revenue Trend")
+st.plotly_chart(fig, use_container_width=True)
 
-    # Count plots for categorical columns
-    st.subheader("📊 Categorical Columns Distribution")
-    for col in cat_cols:
-        fig, ax = plt.subplots()
-        sns.countplot(y=df[col], order=df[col].value_counts().index, ax=ax, palette="viridis")
-        ax.set_title(f"Count of {col}")
-        st.pyplot(fig)
+# ========================
+# 🏆 Top Products & Categories
+# ========================
+st.subheader("🏆 Top Products & Categories")
 
-    # Correlation heatmap
-    if len(num_cols) > 1:
-        st.subheader("🔥 Correlation Heatmap")
-        fig, ax = plt.subplots(figsize=(8, 6))
-        sns.heatmap(df[num_cols].corr(), annot=True, cmap="coolwarm", ax=ax)
-        st.pyplot(fig)
+top_n = st.slider("How many top items to show?", 5, 20, 10)
 
-    # Time series trend if date column exists
-    date_cols = df.select_dtypes(include=["datetime64", "object"]).columns
-    for col in date_cols:
-        try:
-            df[col] = pd.to_datetime(df[col])
-            st.subheader(f"⏳ Time Series Trend by {col}")
-            ts = df.groupby(col)[num_cols].mean()
-            fig, ax = plt.subplots(figsize=(10, 5))
-            ts.plot(ax=ax)
-            ax.set_title(f"Trend over {col}")
-            st.pyplot(fig)
-            break
-        except Exception:
-            continue
+# Top Products
+top_products = (df.groupby("product_id")["revenue"].sum()
+                  .sort_values(ascending=False).head(top_n).reset_index())
+fig_prod = px.bar(top_products, x="product_id", y="revenue",
+                  title=f"Top {top_n} Products by Revenue",
+                  labels={"product_id": "Product ID", "revenue": "Revenue"})
+st.plotly_chart(fig_prod, use_container_width=True)
+
+# Top Categories
+top_categories = (df.groupby("category")["revenue"].sum()
+                    .sort_values(ascending=False).reset_index())
+fig_cat = px.bar(top_categories, x="category", y="revenue",
+                 title="Revenue by Category",
+                 labels={"category": "Category", "revenue": "Revenue"})
+st.plotly_chart(fig_cat, use_container_width=True)
+
+# ========================
+# 💳 Payment Method Analysis
+# ========================
+st.subheader("💳 Payment Methods Distribution")
+payment_counts = df["payment_method"].value_counts().reset_index()
+payment_counts.columns = ["payment_method", "count"]
+
+fig_pay = px.pie(payment_counts, names="payment_method", values="count",
+                 title="Payment Method Share", hole=0.4)
+st.plotly_chart(fig_pay, use_container_width=True)
+
+# ========================
+# 🌍 Regional Analysis
+# ========================
+st.subheader("🌍 Regional Sales Analysis")
+region_sales = df.groupby("region")["revenue"].sum().reset_index()
+
+fig_region = px.bar(region_sales, x="region", y="revenue",
+                    title="Revenue by Region",
+                    labels={"region": "Region", "revenue": "Revenue"})
+st.plotly_chart(fig_region, use_container_width=True)
+
+# ========================
+# 📌 Correlations
+# ========================
+st.subheader("📌 Correlation Heatmap")
+num_cols = ["quantity", "price", "discount", "revenue"]
+corr = df[num_cols].corr()
+
+fig, ax = plt.subplots(figsize=(6, 4))
+sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
+st.pyplot(fig)
+
+# ========================
+# 🔍 Distributions
+# ========================
+st.subheader("🔍 Distributions of Numeric Features")
+for col in ["quantity", "price", "discount", "revenue"]:
+    fig, ax = plt.subplots()
+    sns.histplot(df[col], kde=True, color="skyblue", ax=ax)
+    ax.set_title(f"Distribution of {col}")
+    st.pyplot(fig)
+
+# ========================
+# 🧮 Raw Data
+# ========================
+with st.expander("🧮 View Raw Data"):
+    st.dataframe(df.head(100))
+
