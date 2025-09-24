@@ -119,18 +119,35 @@ sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
 st.pyplot(fig)
 
 # ========================
-# 🔍 Distributions
+# 🔍 Distributions (Professional Visuals)
 # ========================
 st.subheader("🔍 Distributions of Numeric Features")
-for col in ["quantity", "price", "discount", "revenue"]:
-    fig, ax = plt.subplots()
-    sns.histplot(df[col], kde=True, color="skyblue", ax=ax)
-    ax.set_title(f"Distribution of {col}")
-    st.pyplot(fig)
+
+# Quantity
+fig_q = px.histogram(df, x="quantity", nbins=30, marginal="box",
+                     title="Distribution of Quantity", color_discrete_sequence=["#636EFA"])
+st.plotly_chart(fig_q, use_container_width=True)
+
+# Price
+log_price = st.checkbox("🔄 Log Scale for Price", value=False)
+fig_p = px.histogram(df, x="price", nbins=40, title="Distribution of Price",
+                     color_discrete_sequence=["#EF553B"])
+if log_price:
+    fig_p.update_xaxes(type="log")
+st.plotly_chart(fig_p, use_container_width=True)
+
+# Discount
+fig_d = px.histogram(df, x="discount", nbins=20, histnorm="probability density",
+                     title="Distribution of Discount (Density)", color_discrete_sequence=["#00CC96"])
+st.plotly_chart(fig_d, use_container_width=True)
+
+# Revenue
+fig_r = px.violin(df, y="revenue", box=True, points="all",
+                  title="Revenue Spread (Violin + Outliers)", color_discrete_sequence=["#AB63FA"])
+st.plotly_chart(fig_r, use_container_width=True)
 
 # ========================
 # 🧮 Raw Data
 # ========================
 with st.expander("🧮 View Raw Data"):
     st.dataframe(df.head(100))
-
