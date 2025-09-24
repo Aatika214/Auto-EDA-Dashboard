@@ -4,10 +4,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 # Streamlit App Title
-st.title("🛒 E-Commerce Advanced EDA Dashboard")
+st.title("📊 Advanced EDA Dashboard - E-Commerce")
 
 # File uploader
-uploaded_file = st.file_uploader("Upload your E-Commerce CSV file", type=["csv"])
+uploaded_file = st.file_uploader("Upload your CSV file", type=["csv"])
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
@@ -26,24 +26,44 @@ if uploaded_file is not None:
     st.subheader("📊 Summary Statistics")
     st.write(df.describe(include="all").transpose())
 
-    # Convert Invoice Date if present
-    if "InvoiceDate" in df.columns:
-        df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"])
-        df["year_month"] = df["InvoiceDate"].dt.to_period("M").astype(str)
+    # Numeric and categorical columns
+    num_cols = df.select_dtypes(include=["int64", "float64"]).columns
+    cat_cols = df.select_dtypes(include=["object"]).columns
+
+    # ⚡ Categorical columns distribution
+    st.subheader("📊 Categorical Columns Distribution")
+    for col in cat_cols:
+        fig, ax = plt.subplots()
+        sns.countplot(y=df[col], order=df[col].value_counts().index, ax=ax, palette="viridis")
+        ax.set_title(f"Count of {col}")
+        st.pyplot(fig)
+
+    # ⚡ Correlation heatmap
+    if len(num_cols) > 1:
+        st.subheader("🔥 Correlation Heatmap")
+        fig, ax = plt.subplots(figsize=(8, 6))
+        sns.heatmap(df[num_cols].corr(), annot=True, cmap="coolwarm", ax=ax)
+        st.pyplot(fig)
+
+    # =========================
+    # 📌 Professional Graphs Added
+    # =========================
 
     # Money spent per customer
     if {"CustomerID", "Country", "AmountSpent"}.issubset(df.columns):
         st.subheader("💰 Money Spent by Customers")
         money_spent = df.groupby(by=['CustomerID','Country'], as_index=False)['AmountSpent'].sum()
         fig, ax = plt.subplots(figsize=(12,5))
-        plt.plot(money_spent.CustomerID, money_spent.AmountSpent, color="teal")
-        plt.xlabel('Customer ID')
-        plt.ylabel('Money Spent ($)')
-        plt.title('Money Spent by Different Customers')
+        ax.plot(money_spent.CustomerID, money_spent.AmountSpent, color="teal")
+        ax.set_xlabel('Customer ID')
+        ax.set_ylabel('Money Spent ($)')
+        ax.set_title('Money Spent by Different Customers')
         st.pyplot(fig)
 
     # Number of orders per month
-    if {"InvoiceNo","year_month"}.issubset(df.columns):
+    if {"InvoiceNo","InvoiceDate"}.issubset(df.columns):
+        df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"])
+        df["year_month"] = df["InvoiceDate"].dt.to_period("M").astype(str)
         st.subheader("🗓️ Number of Orders per Month")
         orders_by_month = df.groupby("year_month")["InvoiceNo"].nunique()
         fig, ax = plt.subplots(figsize=(12,5))
@@ -64,12 +84,4 @@ if uploaded_file is not None:
         ax.set_xlabel("Number of Orders")
         ax.set_ylabel("Country")
         ax.set_title("Orders by Country (excluding UK)")
-        st.pyplot(fig)
-
-    # Correlation heatmap (if numeric features exist)
-    num_cols = df.select_dtypes(include=["int64","float64"]).columns
-    if len(num_cols) > 1:
-        st.subheader("🔥 Correlation Heatmap")
-        fig, ax = plt.subplots(figsize=(8,6))
-        sns.heatmap(df[num_cols].corr(), annot=True, cmap="coolwarm", ax=ax)
         st.pyplot(fig)
