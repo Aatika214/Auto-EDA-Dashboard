@@ -130,23 +130,24 @@ with st.expander("🧮 View Raw Data"):
 
 st.subheader("✨ Advanced Comparative Visuals")
 
-# 1. Top 10 Customers by Spending (Only Axis Labels, No Bar Labels)
+# 1. Top 10 Customers by Spending (Hide X-axis values, keep label only)
 st.markdown("#### 🏅 Top 10 Customers by Spending")
 top_customers = (df.groupby("customer_id")["revenue"].sum()
                    .sort_values(ascending=False).head(10).reset_index())
 
 fig1, ax1 = plt.subplots(figsize=(8,5))
-sns.barplot(data=top_customers, y="customer_id", palette="viridis", ax=ax1)
+sns.barplot(data=top_customers, x="revenue", y="customer_id", palette="viridis", ax=ax1)
 
 # Titles and axis labels
 ax1.set_title("Top 10 Customers by Spending", fontsize=14)
 ax1.set_xlabel("Revenue ($)", fontsize=12)
 ax1.set_ylabel("Customer ID", fontsize=12)
 
-# ✅ Keep axis ticks visible
-# ❌ Remove bar labels (no annotation here)
+# ❌ Hide X-axis tick values
+ax1.set_xticks([])
 
 st.pyplot(fig1)
+
 
 
 
