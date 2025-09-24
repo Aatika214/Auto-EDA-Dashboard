@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.express as px
@@ -19,12 +20,10 @@ if uploaded_file is None:
 df = pd.read_csv(uploaded_file)
 
 # Ensure correct dtypes
-if "order_date" in df.columns:
-    df["order_date"] = pd.to_datetime(df["order_date"], errors="coerce")
+df["order_date"] = pd.to_datetime(df["order_date"], errors="coerce")
 
-# Calculate revenue if columns exist
-if {"quantity", "price", "discount"}.issubset(df.columns):
-    df["revenue"] = df["quantity"] * df["price"] * (1 - df["discount"])
+# Calculate revenue
+df["revenue"] = df["quantity"] * df["price"] * (1 - df["discount"])
 
 # ========================
 # 🔎 Dataset Overview
@@ -40,7 +39,7 @@ with st.expander("📋 Dataset Overview"):
 # ========================
 st.subheader("📊 Key Metrics")
 total_revenue = df["revenue"].sum()
-total_orders = df["order_id"].nunique() if "order_id" in df.columns else 0
+total_orders = df["order_id"].nunique()
 avg_order_value = total_revenue / total_orders if total_orders > 0 else 0
 
 col1, col2, col3 = st.columns(3)
@@ -51,120 +50,144 @@ col3.metric("🛒 Avg Order Value", f"${avg_order_value:,.2f}")
 # ========================
 # 📈 Revenue Trend
 # ========================
-if "order_date" in df.columns:
-    st.subheader("📈 Revenue Over Time")
-    freq = st.radio("Select frequency:", ["D", "M"], index=1, horizontal=True)
+st.subheader("📈 Revenue Over Time")
+freq = st.radio("Select frequency:", ["D", "M"], index=1, horizontal=True)
 
-    if freq == "D":
-        ts = df.groupby(df["order_date"].dt.date)["revenue"].sum().reset_index()
-    else:
-        ts = df.groupby(df["order_date"].dt.to_period("M"))["revenue"].sum().reset_index()
-        ts["order_date"] = ts["order_date"].astype(str)
+if freq == "D":
+    ts = df.groupby(df["order_date"].dt.date)["revenue"].sum().reset_index()
+else:
+    ts = df.groupby(df["order_date"].dt.to_period("M"))["revenue"].sum().reset_index()
+    ts["order_date"] = ts["order_date"].astype(str)
 
-    fig = px.line(ts, x="order_date", y="revenue", title="Revenue Trend")
-    st.plotly_chart(fig, use_container_width=True)
+fig = px.line(ts, x="order_date", y="revenue", title="Revenue Trend")
+st.plotly_chart(fig, use_container_width=True)
 
 # ========================
 # 🏆 Top Products & Categories
 # ========================
-if "product_id" in df.columns and "category" in df.columns:
-    st.subheader("🏆 Top Products & Categories")
+st.subheader("🏆 Top Products & Categories")
 
-    top_n = st.slider("How many top items to show?", 5, 20, 10)
+top_n = st.slider("How many top items to show?", 5, 20, 10)
 
-    # Top Products
-    top_products = (df.groupby("product_id")["revenue"].sum()
-                      .sort_values(ascending=False).head(top_n).reset_index())
-    fig_prod = px.bar(top_products, x="product_id", y="revenue",
-                      title=f"Top {top_n} Products by Revenue",
-                      labels={"product_id": "Product ID", "revenue": "Revenue"})
-    st.plotly_chart(fig_prod, use_container_width=True)
+# Top Products
+top_products = (df.groupby("product_id")["revenue"].sum()
+                  .sort_values(ascending=False).head(top_n).reset_index())
+fig_prod = px.bar(top_products, x="product_id", y="revenue",
+                  title=f"Top {top_n} Products by Revenue",
+                  labels={"product_id": "Product ID", "revenue": "Revenue"})
+st.plotly_chart(fig_prod, use_container_width=True)
 
-    # Top Categories
-    top_categories = (df.groupby("category")["revenue"].sum()
-                        .sort_values(ascending=False).reset_index())
-    fig_cat = px.bar(top_categories, x="category", y="revenue",
-                     title="Revenue by Category",
-                     labels={"category": "Category", "revenue": "Revenue"})
-    st.plotly_chart(fig_cat, use_container_width=True)
+# Top Categories
+top_categories = (df.groupby("category")["revenue"].sum()
+                    .sort_values(ascending=False).reset_index())
+fig_cat = px.bar(top_categories, x="category", y="revenue",
+                 title="Revenue by Category",
+                 labels={"category": "Category", "revenue": "Revenue"})
+st.plotly_chart(fig_cat, use_container_width=True)
 
 # ========================
 # 💳 Payment Method Analysis
 # ========================
-if "payment_method" in df.columns:
-    st.subheader("💳 Payment Methods Distribution")
-    payment_counts = df["payment_method"].value_counts().reset_index()
-    payment_counts.columns = ["payment_method", "count"]
+st.subheader("💳 Payment Methods Distribution")
+payment_counts = df["payment_method"].value_counts().reset_index()
+payment_counts.columns = ["payment_method", "count"]
 
-    fig_pay = px.pie(payment_counts, names="payment_method", values="count",
-                     title="Payment Method Share", hole=0.4)
-    st.plotly_chart(fig_pay, use_container_width=True)
+fig_pay = px.pie(payment_counts, names="payment_method", values="count",
+                 title="Payment Method Share", hole=0.4)
+st.plotly_chart(fig_pay, use_container_width=True)
 
 # ========================
 # 🌍 Regional Analysis
 # ========================
-if "region" in df.columns:
-    st.subheader("🌍 Regional Sales Analysis")
-    region_sales = df.groupby("region")["revenue"].sum().reset_index()
+st.subheader("🌍 Regional Sales Analysis")
+region_sales = df.groupby("region")["revenue"].sum().reset_index()
 
-    fig_region = px.bar(region_sales, x="region", y="revenue",
-                        title="Revenue by Region",
-                        labels={"region": "Region", "revenue": "Revenue"})
-    st.plotly_chart(fig_region, use_container_width=True)
+fig_region = px.bar(region_sales, x="region", y="revenue",
+                    title="Revenue by Region",
+                    labels={"region": "Region", "revenue": "Revenue"})
+st.plotly_chart(fig_region, use_container_width=True)
 
 # ========================
 # 📌 Correlations
 # ========================
-num_cols = [col for col in ["quantity", "price", "discount", "revenue"] if col in df.columns]
-if len(num_cols) > 1:
-    st.subheader("📌 Correlation Heatmap")
-    corr = df[num_cols].corr()
-    fig, ax = plt.subplots(figsize=(6, 4))
-    sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
-    st.pyplot(fig)
+st.subheader("📌 Correlation Heatmap")
+num_cols = ["quantity", "price", "discount", "revenue"]
+corr = df[num_cols].corr()
+
+fig, ax = plt.subplots(figsize=(6, 4))
+sns.heatmap(corr, annot=True, cmap="coolwarm", ax=ax)
+st.pyplot(fig)
 
 # ========================
-# 📌 Professional Graphs (Your Requirement)
+# 🔍 Distributions (Professional Visuals)
 # ========================
+st.subheader("🔍 Distributions of Numeric Features")
 
-# Money spent per customer
-if {"customer_id", "country", "revenue"}.issubset(df.columns):
-    st.subheader("💰 Money Spent by Customers")
-    money_spent = df.groupby(by=['customer_id','country'], as_index=False)['revenue'].sum()
-    fig, ax = plt.subplots(figsize=(12,5))
-    ax.plot(money_spent.customer_id, money_spent.revenue, color="teal")
-    ax.set_xlabel('Customer ID')
-    ax.set_ylabel('Money Spent ($)')
-    ax.set_title('Money Spent by Different Customers')
-    st.pyplot(fig)
+# Quantity
+fig_q = px.histogram(df, x="quantity", nbins=30, marginal="box",
+                     title="Distribution of Quantity", color_discrete_sequence=["#636EFA"])
+st.plotly_chart(fig_q, use_container_width=True)
 
-# Number of orders per month
-if {"order_id", "order_date"}.issubset(df.columns):
-    st.subheader("🗓️ Number of Orders per Month")
-    df["year_month"] = df["order_date"].dt.to_period("M").astype(str)
-    orders_by_month = df.groupby("year_month")["order_id"].nunique()
-    fig, ax = plt.subplots(figsize=(12,5))
-    orders_by_month.plot(kind="bar", color="orange", ax=ax)
-    ax.set_xlabel("Month")
-    ax.set_ylabel("Number of Orders")
-    ax.set_title("Orders per Month")
-    st.pyplot(fig)
+# Price
+log_price = st.checkbox("🔄 Log Scale for Price", value=False)
+fig_p = px.histogram(df, x="price", nbins=40, title="Distribution of Price",
+                     color_discrete_sequence=["#EF553B"])
+if log_price:
+    fig_p.update_xaxes(type="log")
+st.plotly_chart(fig_p, use_container_width=True)
 
-# Number of orders by country (excluding UK)
-if {"country", "order_id"}.issubset(df.columns):
-    st.subheader("🌍 Orders by Country")
-    group_country_orders = df.groupby('country')["order_id"].count().sort_values()
-    if "United Kingdom" in group_country_orders.index:
-        group_country_orders = group_country_orders.drop("United Kingdom")
-    fig, ax = plt.subplots(figsize=(12,6))
-    group_country_orders.plot(kind="barh", color="purple", ax=ax)
-    ax.set_xlabel("Number of Orders")
-    ax.set_ylabel("Country")
-    ax.set_title("Orders by Country (excluding UK)")
-    st.pyplot(fig)
+# Discount
+fig_d = px.histogram(df, x="discount", nbins=20, histnorm="probability density",
+                     title="Distribution of Discount (Density)", color_discrete_sequence=["#00CC96"])
+st.plotly_chart(fig_d, use_container_width=True)
+
+# Revenue
+fig_r = px.violin(df, y="revenue", box=True, points="all",
+                  title="Revenue Spread (Violin + Outliers)", color_discrete_sequence=["#AB63FA"])
+st.plotly_chart(fig_r, use_container_width=True)
 
 # ========================
 # 🧮 Raw Data
 # ========================
 with st.expander("🧮 View Raw Data"):
-    st.dataframe(df.head(100))
+    st.dataframe(df.head(100))   
+
+# ========================
+# ✨ NEW PROFESSIONAL GRAPHS
+# ========================
+
+st.subheader("✨ Advanced Comparative Visuals")
+
+# 1. Top 10 Customers by Spending
+st.markdown("#### 🏅 Top 10 Customers by Spending")
+top_customers = (df.groupby("customer_id")["revenue"].sum()
+                   .sort_values(ascending=False).head(10).reset_index())
+fig1, ax1 = plt.subplots(figsize=(8,5))
+sns.barplot(data=top_customers, x="revenue", y="customer_id", palette="viridis", ax=ax1)
+ax1.set_title("Top 10 Customers by Spending", fontsize=14)
+ax1.set_xlabel("Revenue ($)")
+ax1.set_ylabel("Customer ID")
+st.pyplot(fig1)
+
+# 2. Monthly Orders Trend
+st.markdown("#### 📅 Monthly Orders Trend")
+monthly_orders = df.groupby(df["order_date"].dt.to_period("M"))["order_id"].nunique().reset_index()
+monthly_orders["order_date"] = monthly_orders["order_date"].astype(str)
+fig2, ax2 = plt.subplots(figsize=(8,5))
+sns.lineplot(data=monthly_orders, x="order_date", y="order_id", marker="o", color="crimson", ax=ax2)
+ax2.set_title("Monthly Orders Trend", fontsize=14)
+ax2.set_xlabel("Month")
+ax2.set_ylabel("Number of Orders")
+plt.xticks(rotation=45)
+st.pyplot(fig2)
+
+# 3. Orders by Country (UK removed)
+st.markdown("#### 🌍 Orders by Country (Excluding UK)")
+country_orders = df[df["country"] != "UK"].groupby("country")["order_id"].nunique().reset_index()
+country_orders = country_orders.sort_values("order_id", ascending=False).head(10)
+fig3, ax3 = plt.subplots(figsize=(8,5))
+sns.barplot(data=country_orders, x="order_id", y="country", palette="magma", ax=ax3)
+ax3.set_title("Orders by Country (Top 10, UK Excluded)", fontsize=14)
+ax3.set_xlabel("Number of Orders")
+ax3.set_ylabel("Country")
+st.pyplot(fig3)
